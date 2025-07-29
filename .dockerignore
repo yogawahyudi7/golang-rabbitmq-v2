@@ -1,0 +1,57 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+docs/
+
+# Environment files (except .env.example)
+.env
+.env.local
+.env.development
+.env.production
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/*.log*
+logs/*.gz
+
+# Test files
+*_test.go
+**/*_test.go
+
+# Build artifacts
+main
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Vendor
+vendor/
+
+# Temporary files
+tmp/
+temp/

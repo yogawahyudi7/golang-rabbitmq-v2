@@ -1,0 +1,108 @@
+version: '3.8'
+
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rabbitmq_postgres
+    environment:
+      POSTGRES_DB: rabbitmq_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq_broker
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Go Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rabbitmq_app
+    environment:
+      # Database Configuration
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: rabbitmq_app
+      DB_SSLMODE: disable
+      
+      # RabbitMQ Configuration
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: app_exchange
+      RABBITMQ_QUEUE: app_queue
+      RABBITMQ_ROUTING_KEY: app.message
+      
+      # Server Configuration
+      SERVER_PORT: 8080
+      GIN_MODE: release
+      
+      # Logging Configuration
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      LOG_FILE_ENABLED: true
+      LOG_DIR: logs
+      LOG_MAX_SIZE: 100
+      LOG_MAX_BACKUPS: 3
+      LOG_MAX_AGE: 30
+      LOG_COMPRESS: true
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_logs:/app/logs
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/monitoring/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge

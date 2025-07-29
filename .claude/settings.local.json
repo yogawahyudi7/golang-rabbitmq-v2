@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(git checkout:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(curl:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker-compose:*)"
+    ],
+    "deny": []
+  }
+}
