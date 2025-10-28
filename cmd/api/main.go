@@ -70,6 +70,7 @@ func main() {
 
 	userHandler := handler.NewUserHandler(userUseCase, log)
 	messageHandler := handler.NewMessageHandler(messageUseCase, rabbitConn, log)
+	monitoringHandler := handler.NewMonitoringHandler(rabbitConn, log)
 
 	gin.SetMode(cfg.Server.GinMode)
 	router := gin.New()
@@ -100,8 +101,20 @@ func main() {
 
 		monitoring := api.Group("/monitoring")
 		{
-			monitoring.GET("/health", messageHandler.GetHealthCheck)
-			monitoring.GET("/metrics", messageHandler.GetRabbitMQMetrics)
+			// Basic monitoring
+			monitoring.GET("/health", monitoringHandler.GetHealthCheck)
+			monitoring.GET("/metrics", monitoringHandler.GetMetrics)
+			monitoring.GET("/metrics/detailed", monitoringHandler.GetDetailedMetrics)
+
+			// Real-time activity monitoring
+			monitoring.GET("/activity", monitoringHandler.GetActivitySnapshot)
+
+			// Event history
+			monitoring.GET("/events", monitoringHandler.GetEventHistory)
+			monitoring.GET("/events/publish", monitoringHandler.GetPublishEvents)
+			monitoring.GET("/events/consume", monitoringHandler.GetConsumeEvents)
+			monitoring.GET("/events/failed", monitoringHandler.GetFailedEvents)
+			monitoring.DELETE("/events", monitoringHandler.ClearEventHistory)
 		}
 	}
 

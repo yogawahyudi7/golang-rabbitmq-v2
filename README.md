@@ -2,10 +2,37 @@
 
 A production-ready Go application with RabbitMQ message processing, built using Clean Architecture principles.
 
+## 🎯 Quick Start
+
+**New to this project?** Start here: **[📖 GETTING_STARTED.md](GETTING_STARTED.md)**
+
+### **Super Quick Start (1 Command!):**
+
+```bash
+make start          # 🚀 Starts everything automatically!
+```
+
+Then open dashboard:
+```bash
+make dashboard      # 🎨 Opens monitoring dashboard
+```
+
+**That's it!** Full guide: **[📖 RUNNING_WITH_MAKE.md](RUNNING_WITH_MAKE.md)**
+
+### **Or Manual 3-Step:**
+
+```bash
+make docker-up      # 1. Start all services
+make dashboard      # 2. Open monitoring dashboard
+make test-api       # 3. Generate test traffic
+```
+
 ## 🚀 Features
 
 - **Clean Architecture** - Separation of concerns with domain, usecase, repository layers
 - **RabbitMQ Integration** - Publisher confirms, consumer with retry mechanism, metrics monitoring
+- **Real-time Monitoring Dashboard** - Beautiful web UI for monitoring pub/sub activity
+- **Event History Tracking** - Track every publish/consume event with details
 - **PostgreSQL** - Database with GORM ORM
 - **Gin Framework** - High-performance HTTP router
 - **Structured Logging** - Logrus with JSON formatting
@@ -14,7 +41,7 @@ A production-ready Go application with RabbitMQ message processing, built using 
 - **Docker Support** - Containerized deployment
 - **Graceful Shutdown** - Proper resource cleanup
 - **Health Checks** - Application and dependency health monitoring
-- **Metrics** - Internal RabbitMQ metrics tracking
+- **Advanced Metrics** - Comprehensive RabbitMQ metrics tracking with history
 
 ## 📁 Project Structure
 
@@ -50,13 +77,21 @@ A production-ready Go application with RabbitMQ message processing, built using 
 │   │   ├── connection.go           # RabbitMQ connection management
 │   │   ├── publisher.go            # Message publisher with confirms
 │   │   ├── consumer.go             # Message consumer with worker pool
-│   │   └── metrics.go              # Internal metrics tracking
+│   │   └── metrics.go              # Enhanced metrics with event tracking
 │   └── validator/
 │       └── validator.go            # Request validation
+├── web/
+│   ├── dashboard.html              # Monitoring dashboard UI
+│   ├── dashboard.js                # Dashboard logic
+│   ├── open-dashboard.bat          # Windows launcher
+│   └── open-dashboard.sh           # Linux/Mac launcher
 ├── logs/                           # Log files directory
 ├── docker-compose.yml              # Docker services
 ├── Dockerfile                      # Application container
 ├── Makefile                        # Build automation and development commands
+├── GETTING_STARTED.md              # Quick start guide
+├── DASHBOARD_GUIDE.md              # Dashboard usage guide
+├── MONITORING_API.md               # API documentation
 └── README.md                       # This file
 ```
 
@@ -162,7 +197,16 @@ A production-ready Go application with RabbitMQ message processing, built using 
 
 ### Monitoring
 - `GET /api/v1/monitoring/health` - Health check
-- `GET /api/v1/monitoring/metrics` - RabbitMQ metrics
+- `GET /api/v1/monitoring/metrics` - Basic metrics
+- `GET /api/v1/monitoring/metrics/detailed` - Detailed metrics with rates
+- `GET /api/v1/monitoring/activity` - Real-time activity snapshot
+- `GET /api/v1/monitoring/events` - Event history with filtering
+- `GET /api/v1/monitoring/events/publish` - Publish events history
+- `GET /api/v1/monitoring/events/consume` - Consume events history
+- `GET /api/v1/monitoring/events/failed` - Failed events history
+- `DELETE /api/v1/monitoring/events` - Clear event history
+
+**💡 Tip:** Use the [Monitoring Dashboard](web/dashboard.html) for visual real-time monitoring!
 
 ## 🔧 Configuration
 
@@ -344,6 +388,7 @@ make docker-shell       # Access container shell
 make health             # Check application health
 make metrics            # Show RabbitMQ metrics
 make rabbitmq-ui        # Open RabbitMQ Management UI
+make dashboard          # Open monitoring dashboard (NEW!)
 
 # Cleanup
 make clean              # Clean build artifacts
@@ -352,6 +397,27 @@ make docker-clean       # Clean Docker resources
 ```
 
 ## 📈 Monitoring & Observability
+
+### 🎨 Monitoring Dashboard
+
+**New!** Real-time web dashboard for monitoring RabbitMQ activity:
+
+```bash
+make dashboard
+```
+
+**Features:**
+- ✅ Real-time metrics cards (Published, Consumed, Failed, Success Rate)
+- ✅ Live charts with publish/consume rates
+- ✅ Event history table with filtering
+- ✅ Auto-refresh every 5 seconds
+- ✅ Color-coded status indicators
+- ✅ Beautiful modern UI
+
+**Documentation:**
+- [Getting Started Guide](GETTING_STARTED.md) - Setup instructions
+- [Dashboard Guide](DASHBOARD_GUIDE.md) - Usage guide & tips
+- [Monitoring API](MONITORING_API.md) - API documentation
 
 ### Health Checks
 - Database connectivity
@@ -366,11 +432,13 @@ make docker-clean       # Clean Docker resources
 - **Error tracking** with stack traces
 - **Component-based log contexts** for easy filtering
 
-### Metrics
-- Message processing rates
-- Queue depths
-- Error rates
+### Metrics & Event Tracking
+- Real-time message processing rates
+- Event history (last 1000 events)
+- Success/failure tracking with details
+- Processing time analytics
 - Connection statistics
+- Publisher confirmation tracking
 
 ## 🚀 Production Deployment
 

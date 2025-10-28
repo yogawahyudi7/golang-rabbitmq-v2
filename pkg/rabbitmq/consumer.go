@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streadway/amqp"
 	"golang-rabbitmq-v2/pkg/logger"
+
+	"github.com/streadway/amqp"
 )
 
 type MessageHandler func(ctx context.Context, body []byte) error
@@ -53,7 +54,7 @@ func (c *consumer) Start(ctx context.Context, handler MessageHandler) error {
 		c.conn.mu.RUnlock()
 		return fmt.Errorf("connection is closed")
 	}
-	
+
 	channel := c.conn.channel
 	c.conn.mu.RUnlock()
 
@@ -89,11 +90,11 @@ func (c *consumer) Start(ctx context.Context, handler MessageHandler) error {
 		case <-ctx.Done():
 			c.logger.WithContext("rabbitmq-consumer").Info("Consumer stopped due to context cancellation")
 			return ctx.Err()
-			
+
 		case <-c.stopChan:
 			c.logger.WithContext("rabbitmq-consumer").Info("Consumer stopped gracefully")
 			return nil
-			
+
 		case msg, ok := <-msgs:
 			if !ok {
 				// Channel tertutup, coba reconnect
@@ -136,16 +137,31 @@ func (c *consumer) processMessageWithWorkerPool(ctx context.Context, msg amqp.De
 // msg.Nack() - negative acknowledge dengan requeue option
 func (c *consumer) processMessage(ctx context.Context, msg amqp.Delivery, handler MessageHandler) {
 	startTime := time.Now()
-	
+
+	// Track consuming start
+	c.conn.metrics.StartConsuming()
+	defer c.conn.metrics.EndConsuming()
+
 	// Panic recovery
 	defer func() {
 		if r := recover(); r != nil {
+			duration := time.Since(startTime)
 			c.logger.WithContext("rabbitmq-consumer").WithFields(map[string]interface{}{
 				"panic":        r,
 				"delivery_tag": msg.DeliveryTag,
 				"routing_key":  msg.RoutingKey,
 			}).Error("Recovered from panic while processing message")
-			
+
+			// Track failed event
+			c.conn.metrics.IncrementFailed()
+			c.conn.metrics.TrackConsumeEvent(
+				msg.DeliveryTag,
+				msg.RoutingKey,
+				false,
+				duration,
+				fmt.Errorf("panic: %v", r),
+			)
+
 			// Nack message dengan requeue untuk retry
 			msg.Nack(false, true)
 		}
@@ -164,10 +180,15 @@ func (c *consumer) processMessage(ctx context.Context, msg amqp.Delivery, handle
 			"routing_key":  msg.RoutingKey,
 			"duration_ms":  duration.Milliseconds(),
 		}).Error("Handler returned error")
-		
+
+		// Track metrics
+		c.conn.metrics.IncrementFailed()
+		c.conn.metrics.TrackConsumeEvent(msg.DeliveryTag, msg.RoutingKey, false, duration, err)
+
 		// Tentukan apakah message harus di-requeue atau di-reject
 		if c.shouldRequeue(err) {
 			// Nack dengan requeue untuk retry
+			c.conn.metrics.IncrementRequeued()
 			msg.Nack(false, true)
 		} else {
 			// Nack tanpa requeue (dead letter atau discard)
@@ -183,7 +204,12 @@ func (c *consumer) processMessage(ctx context.Context, msg amqp.Delivery, handle
 		"routing_key":  msg.RoutingKey,
 		"duration_ms":  duration.Milliseconds(),
 	}).Debug("Message processed successfully")
-	
+
+	// Track metrics
+	c.conn.metrics.IncrementConsumed()
+	c.conn.metrics.RecordProcessingTime(duration)
+	c.conn.metrics.TrackConsumeEvent(msg.DeliveryTag, msg.RoutingKey, true, duration, nil)
+
 	// msg.Ack - acknowledge message berhasil diproses
 	// Parameter: multiple (false = ack single message)
 	if err := msg.Ack(false); err != nil {
@@ -198,7 +224,7 @@ func (c *consumer) shouldRequeue(err error) bool {
 	// - Database connection error -> requeue
 	// - Validation error -> tidak requeue
 	// - Temporary network error -> requeue
-	
+
 	// Untuk contoh ini, kita requeue semua error
 	// Dalam production, implementasikan logic yang lebih sophisticated
 	return true

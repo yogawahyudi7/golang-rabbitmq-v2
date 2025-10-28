@@ -180,6 +180,15 @@ rabbitmq-reset: ## Reset RabbitMQ (recreate container)
 	@$(DOCKER_COMPOSE) up -d rabbitmq
 	@echo "✅ RabbitMQ reset"
 
+# Dashboard Commands
+dashboard: ## Open monitoring dashboard
+	@echo "Opening RabbitMQ Monitoring Dashboard..."
+	@cd web && ./open-dashboard.bat || ./open-dashboard.sh
+
+dashboard-direct: ## Open dashboard directly (no HTTP server)
+	@echo "Opening dashboard directly..."
+	@start web/dashboard.html || open web/dashboard.html || xdg-open web/dashboard.html
+
 # Health Checks
 health: ## Check application health
 	@echo "Checking application health..."
@@ -222,10 +231,13 @@ info: ## Show project information
 	@echo "  Application: http://localhost:8080"
 	@echo "  RabbitMQ UI: http://localhost:15672 (guest/guest)"
 	@echo "  PostgreSQL: localhost:5432"
+	@echo "  Dashboard: web/dashboard.html (run 'make dashboard')"
 	@echo ""
 	@echo "API Endpoints:"
 	@echo "  Health: GET /api/v1/monitoring/health"
 	@echo "  Metrics: GET /api/v1/monitoring/metrics"
+	@echo "  Activity: GET /api/v1/monitoring/activity"
+	@echo "  Events: GET /api/v1/monitoring/events"
 	@echo "  Users: POST|GET /api/v1/users"
 	@echo "  Messages: POST|GET /api/v1/messages"
 
@@ -240,4 +252,38 @@ quick-start: dev-setup docker-up ## Quick start for new developers
 	@echo "  3. View logs: make docker-logs"
 	@echo "  4. Open RabbitMQ UI: make rabbitmq-ui"
 	@echo ""
+
+# Full demo start (start services, wait, test, open dashboard)
+start: ## Start everything (services + dashboard + test)
+	@echo "🚀 Starting Full Quick Start Demo..."
+	@echo ""
+	@echo "Step 1/4: Starting Docker services..."
+	@make docker-up
+	@echo ""
+	@echo "Step 2/4: Waiting for services to be ready..."
+	@echo "⏳ Please wait 30 seconds..."
+	@sleep 30 || timeout 30
+	@echo ""
+	@echo "Step 3/4: Testing API..."
+	@make test-api
+	@echo ""
+	@echo "Step 4/4: Opening dashboard..."
+	@echo "🎨 Dashboard will open in your browser..."
+	@echo "📊 You can also run: make dashboard"
+	@echo ""
+	@echo "✅ Quick Start Complete!"
+	@echo ""
+	@echo "📍 Services Running:"
+	@echo "  • Application: http://localhost:8080"
+	@echo "  • Dashboard: Run 'make dashboard' to open"
+	@echo "  • RabbitMQ UI: http://localhost:15672 (guest/guest)"
+	@echo ""
+	@echo "🔧 Useful Commands:"
+	@echo "  • make dashboard    - Open monitoring dashboard"
+	@echo "  • make health       - Check application health"
+	@echo "  • make metrics      - Show RabbitMQ metrics"
+	@echo "  • make docker-logs  - View application logs"
+	@echo "  • make docker-down  - Stop all services"
+	@echo ""
+	@echo "🎉 Ready to monitor! Run 'make dashboard' now!"
 
